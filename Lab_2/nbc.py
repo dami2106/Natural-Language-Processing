@@ -71,8 +71,8 @@ for label, page in zip(train_labels, train_data):
         word_frequencies[label][ngram] += 1
 
 """
-A classify function that takes in a page and a delta value, and returns the most likely book 
-"""
+A classify function that takes in a page and a delta value, and returns the most likely book
+"""  
 def classify(page, delta = 0.01):
     class_counts = collections.Counter(label for label in train_labels)
     class_priors = {cls: count / len(train_data) for cls, count in class_counts.items()}
