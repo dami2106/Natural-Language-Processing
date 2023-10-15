@@ -35,8 +35,8 @@ def compute_metrics(eval_pred):
     metric = evaluate.load("accuracy")
     return metric.compute(predictions=predictions, references=labels)
 
-
 ds = load_dataset('masakhane/masakhanews', 'hau') 
+# ds = load_dataset("HausaNLP/NaijaSenti-Twitter", "ibo")
 tokenized_datasets = ds.map(tokenize_function, batched=True)
 train_dataset = tokenized_datasets["train"].shuffle(seed=seed)
 test_dataset = tokenized_datasets["test"].shuffle(seed=seed)

@@ -36,8 +36,8 @@ def compute_metrics(eval_pred):
     return metric.compute(predictions=predictions, references=labels)
 
 
-
-ds = load_dataset("HausaNLP/NaijaSenti-Twitter", "hau")
+#here we use the NaijaSenti-Twitter dataset with the Igbo Language
+ds = load_dataset("HausaNLP/NaijaSenti-Twitter", "ibo")
 tokenized_datasets = ds.map(tokenize_function, batched=True)
 train_dataset = tokenized_datasets["train"].shuffle(seed=seed)
 test_dataset = tokenized_datasets["test"].shuffle(seed=seed)
@@ -66,6 +66,7 @@ trainer = Trainer(
 
 
 trainer.train()
+trainer.save_model("part_2_model")
 
-#save the model as pth
-trainer.save_model("test_trainer")
+#Evalualte the model on the test set
+eval_results = trainer.evaluate()
