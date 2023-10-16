@@ -20,9 +20,9 @@ HYPER PARAMS
 """
 seed = 42
 classes = 10
-epochs = 1
-learning_rate = 0.0001
-batch_size = 32
+epochs = 7
+learning_rate = 5e-5
+batch_size = 128
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 def compute_metrics(logits,labels):
@@ -52,7 +52,7 @@ def compute_metrics(logits,labels):
         "f1": f1_value['f1'],
         "precision": precision_value['precision'],
         "recall": recall_value['recall'],
-        "cohen's kappa": cohens_kappa,
+        "cohenkappa": cohens_kappa,
         'val loss':100000000,
 
     }
@@ -146,16 +146,16 @@ Now we need to train model 1 on the first dataset
 """
 model = AutoModelForSequenceClassification.from_pretrained("castorini/afriberta_base", num_labels=classes).to(device)
 model.config.loss_name = "cross_entropy" #use cross entropy loss function
+optimizer = AdamW(model.parameters(), lr=learning_rate)
 
 train_dataloader = DataLoader(train_dataset_1, shuffle=True, batch_size=8)
 val_dataloader = DataLoader(val_dataset_1, batch_size=8)
-
-optimizer = AdamW(model.parameters(), lr=learning_rate)
-
 num_training_steps = epochs * len(train_dataloader)
+
 lr_scheduler = get_scheduler(
     name="linear", optimizer=optimizer, num_warmup_steps=0, num_training_steps=num_training_steps
 )
+
 
 model.train()
 progress_bar = tqdm(range(num_training_steps))
@@ -173,6 +173,9 @@ for epoch in range(epochs):
 
 
 model.eval()
+true_labels = []
+predicted_labels = []
+
 for batch in val_dataloader:
     batch = {k: v.to(device) for k, v in batch.items()}
     with torch.no_grad():
@@ -181,6 +184,100 @@ for batch in val_dataloader:
     logits = outputs.logits
     predictions = torch.argmax(logits, dim=-1)
     true = batch["labels"]
-    compute_metrics(logits,true)
 
-    
+    true_labels.extend(true.cpu().numpy())
+    predicted_labels.extend(logits.cpu().numpy())
+
+custom_metrics_dict = compute_metrics(np.array(predicted_labels), np.array(true_labels))
+
+print("===========MODEL 1 ON DATASET 1 REPORT===========")
+print("Accuracy:", custom_metrics_dict["accuracy"])
+print("F1 Score:", custom_metrics_dict["f1"])
+print("Precision:", custom_metrics_dict["precision"])
+print("recall:", custom_metrics_dict["recall"])
+print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
+print("==================================================")
+
+
+"""
+Train on the second dataset
+"""
+del train_dataloader
+del val_dataloader
+model.train()
+train_dataloader = DataLoader(train_dataset_2, shuffle=True, batch_size=8)
+val_dataloader = DataLoader(val_dataset_2, batch_size=8)
+num_training_steps = epochs * len(train_dataloader)
+
+lr_scheduler = get_scheduler(
+    name="linear", optimizer=optimizer, num_warmup_steps=0, num_training_steps=num_training_steps
+)
+
+
+# model.train()
+progress_bar = tqdm(range(num_training_steps))
+for epoch in range(epochs):
+    for batch in train_dataloader:
+        batch = {k: v.to(device) for k, v in batch.items()}
+        outputs = model(**batch)
+        loss = outputs.loss
+        loss.backward()
+
+        optimizer.step()
+        lr_scheduler.step()
+        optimizer.zero_grad()
+        progress_bar.update(1)
+
+model.eval()
+true_labels = []
+predicted_labels = []
+
+for batch in val_dataloader:
+    batch = {k: v.to(device) for k, v in batch.items()}
+    with torch.no_grad():
+        outputs = model(**batch)
+
+    logits = outputs.logits
+    predictions = torch.argmax(logits, dim=-1)
+    true = batch["labels"]
+
+    true_labels.extend(true.cpu().numpy())
+    predicted_labels.extend(logits.cpu().numpy())
+
+custom_metrics_dict = compute_metrics(np.array(predicted_labels), np.array(true_labels))
+
+print("===========MODEL 2 ON DATASET 2 REPORT===========")
+print("Accuracy:", custom_metrics_dict["accuracy"])
+print("F1 Score:", custom_metrics_dict["f1"])
+print("Precision:", custom_metrics_dict["precision"])
+print("recall:", custom_metrics_dict["recall"])
+print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
+print("==================================================")
+
+
+model.eval()
+true_labels = []
+predicted_labels = []
+del val_dataloader
+val_dataloader = DataLoader(val_dataset_1, batch_size=8)
+for batch in val_dataloader:
+    batch = {k: v.to(device) for k, v in batch.items()}
+    with torch.no_grad():
+        outputs = model(**batch)
+
+    logits = outputs.logits
+    predictions = torch.argmax(logits, dim=-1)
+    true = batch["labels"]
+
+    true_labels.extend(true.cpu().numpy())
+    predicted_labels.extend(logits.cpu().numpy())
+
+custom_metrics_dict = compute_metrics(np.array(predicted_labels), np.array(true_labels))
+
+print("===========MODEL 2 ON DATASET 1 REPORT===========")
+print("Accuracy:", custom_metrics_dict["accuracy"])
+print("F1 Score:", custom_metrics_dict["f1"])
+print("Precision:", custom_metrics_dict["precision"])
+print("recall:", custom_metrics_dict["recall"])
+print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
+print("==================================================")
