@@ -14,16 +14,19 @@ from torch import nn
 from tqdm.auto import tqdm
 import evaluate
 from sklearn.metrics import cohen_kappa_score, precision_recall_curve
+from torch.utils.tensorboard import SummaryWriter
 
 """
 HYPER PARAMS
 """
 seed = 42
 classes = 10
-epochs = 7
+epochs = 1
 learning_rate = 5e-5
 batch_size = 128
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+writer = SummaryWriter()
 
 def compute_metrics(logits,labels):
     # logits, labels = eval_pred
@@ -71,8 +74,7 @@ def tokenize_function(examples):
 Function to edit the labels of the various datasets to have the same number of output classes
 i.e. because we have 3 classes from the first dataset and 7 labels in the second, both labels should be 
 edited to contain 10 classes 
-""" 
-# --> CHECK HERE
+"""
 def one_hot_encode_labels(dataset, dataset_number, extend_classes = 10):
     orig_labels = np.array(dataset["labels"])
     new_labels = torch.zeros(extend_classes)
@@ -161,7 +163,7 @@ lr_scheduler = get_scheduler(
 model.train()
 progress_bar = tqdm(range(num_training_steps))
 for epoch in range(epochs):
-    for batch in train_dataloader:
+    for i,batch in enumerate(train_dataloader):
         batch = {k: v.to(device) for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs.loss
@@ -172,6 +174,8 @@ for epoch in range(epochs):
         optimizer.zero_grad()
         progress_bar.update(1)
 
+writer.flush()
+writer.close()
 
 model.eval()
 true_labels = []
@@ -267,7 +271,7 @@ for batch in val_dataloader:
         outputs = model(**batch)
 
     logits = outputs.logits
-    predictions = torch.argmax(logits, dim=-1) #Unsure about this - needs to be soft labels ? 
+    predictions = torch.argmax(logits, dim=-1)
     true = batch["labels"]
 
     true_labels.extend(true.cpu().numpy())
@@ -284,28 +288,4 @@ print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("==================================================")
 
 
-"""
-==========MODEL 1 ON DATASET 1 REPORT===========
-Accuracy: 0.7876154263986963
-F1 Score: 0.7874910200927531
-Precision: 0.7873872964342025
-recall: 0.7876154263986963
-Cohen's Kappa: 0.6724382640066656
-==================================================
 
-===========MODEL 2 ON DATASET 2 REPORT===========
-Accuracy: 0.8391167192429022
-F1 Score: 0.8263375065379148
-Precision: 0.8309560769078235
-recall: 0.8391167192429022
-Cohen's Kappa: 0.8108724643784656
-==================================================
-
-===========MODEL 2 ON DATASET 1 REPORT===========
-Accuracy: 0.12819120043454643
-F1 Score: 0.16484230972431413
-Precision: 0.23084239158711428
-recall: 0.12819120043454643
-Cohen's Kappa: 0.09545244291407817
-==================================================
-"""
