@@ -6,8 +6,9 @@ import numpy as np
 import evaluate
 import torch
 import evaluate
-from sklearn.metrics import cohen_kappa_score
-
+from sklearn.metrics import cohen_kappa_score, confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 """
 HYPER PARAMS FOR MODELS
@@ -25,8 +26,6 @@ DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 """
 =======================
 """
-
-
 
 
 """
@@ -144,13 +143,15 @@ def compute_metrics(logits, labels):
 
     cohens_kappa=cohen_kappa_score(labels, predictions)
 
+    conf_matrx = confusion_matrix(labels, predictions)
 
     return {
         "accuracy": accuracy['accuracy'],
         "f1": f1_value['f1'],
         "precision": precision_value['precision'],
         "recall": recall_value['recall'],
-        "cohenkappa": cohens_kappa
+        "cohenkappa": cohens_kappa,
+        "confusion_matrix": conf_matrx
     }
 
 
@@ -178,3 +179,17 @@ def evaluate_model(model, dataloader):
 
     custom_metrics_dict = compute_metrics(np.array(predicted_labels), np.array(true_labels))
     return custom_metrics_dict
+
+"""
+A function to save the confusion matrix
+PARAMS : cm - the confusion matrix to be saved
+         name - the name of the confusion matrix
+"""
+def save_cm(cm, name, title):
+    plt.figure(figsize=(8, 8))
+    sns.set(font_scale=1.2)
+    sns.heatmap(cm, annot=True, fmt='d', cmap='RdPu', cbar=False, annot_kws={'size': 14}, square=True)
+    plt.xlabel('Predicted Labels', fontsize=14)
+    plt.ylabel('True Labels', fontsize=14)
+    plt.title(f'{title}', fontsize=16)
+    plt.savefig(f'Plots/{name}.png', dpi=300)

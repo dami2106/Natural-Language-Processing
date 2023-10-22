@@ -7,6 +7,7 @@
 # !pip install evaluate
 
 
+from matplotlib.pyplot import step
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoModelForTokenClassification
 import pandas as pd
 from  datasets  import  load_dataset
@@ -27,6 +28,7 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
 from Config_Manager import get_dataset, compute_metrics, SEED, LEARNING_RATE, BATCH_SIZE, DEVICE, GENERATIONS, STUDENT_EPOCHS, TEACHER_EPOCHS
 
+from matplotlib import pyplot as plt
 
 """
 HYPER PARAMS FROM CONFIG FILE
@@ -70,6 +72,10 @@ lr_scheduler = get_scheduler(
 
 
 prog_bar = tqdm(range(training_steps))
+
+train_epoch_loss = []
+val_epoch_loss = []
+
 for gen in range(generations):
     teacher_model = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1").to(device)
     teacher_model.config.loss_name = "cross_entropy" #use cross entropy loss function
@@ -116,20 +122,45 @@ for gen in range(generations):
             temp_batch["labels"] = pseudo_labels
             new_batch.append(temp_batch)
 
+    se_loss = []
     for se in range(student_epochs):
+        student_model.train()
+        step_loss = []
         for batch in new_batch:
             batch = {k : v.to(device) for k, v in batch.items()}
             # Train the student model using the teacher pseudo-labels
-            student_model.train()
             student_optimizer.zero_grad()
             student_logits = student_model(**batch).logits
             loss = custom_loss(student_logits, batch["labels"])
             loss.backward()
             student_optimizer.step()
             lr_scheduler.step()
+            step_loss.append(loss.item())
+        se_loss.append(np.mean(step_loss))
+    
+    train_epoch_loss.append(np.mean(se_loss))
         
+    
+    #Evaluate the model on the validation set
+    student_model.eval()
+    step_loss = []
+    for batch in val_dataloader:
+        batch = {k: v.to(device) for k, v in batch.items()}
+        outputs = student_model(**batch)
+        loss = outputs.loss
+        step_loss.append(loss.item())
+    
+    val_epoch_loss.append(np.mean(step_loss))
+    
+        
+plt.plot(train_epoch_loss, label='Training Loss')
+plt.plot(val_epoch_loss,label='Validation Loss')
+plt.legend()
+plt.xticks(np.arange(0, len(train_epoch_loss), 1))
+plt.xlabel("Generation")
+plt.ylabel("Loss")
+plt.title("Model 2 with SIL Loss on Dataset 2 (MasaKhaneNews)")
+plt.savefig("Model_2_SIL_Loss.png", dpi = 300)
 
 #Save the student model 
 student_model.save_pretrained("Saved_Models/model_2_SIL_2")
-
-

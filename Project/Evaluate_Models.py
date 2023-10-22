@@ -1,8 +1,9 @@
 #IMPORTS
 from transformers import AutoModelForSequenceClassification
 from torch.utils.data import DataLoader
-from Config_Manager import get_dataset, compute_metrics, evaluate_model, SEED, CLASSES, EPOCHS, LEARNING_RATE, BATCH_SIZE, DEVICE
-
+from Config_Manager import get_dataset, compute_metrics, evaluate_model, SEED, CLASSES, EPOCHS, LEARNING_RATE, BATCH_SIZE, DEVICE, save_cm
+from sklearn import metrics
+import matplotlib.pyplot as plt
 """
 HYPER PARAMS FROM CONFIG FILE
 """
@@ -32,7 +33,7 @@ print("Precision:", custom_metrics_dict["precision"])
 print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("==============================================================\n\n")
-
+save_cm(custom_metrics_dict["confusion_matrix"], "Model_1_Dataset1", "Model 1 on Dataset 1 Confusion Matrix")
 
 custom_metrics_dict = evaluate_model(model_2_no_sil, test_2_dataloader)
 print("===========NO SIL MODEL ON DATASET 2 (Masakhane) REPORT===========")
@@ -42,7 +43,7 @@ print("Precision:", custom_metrics_dict["precision"])
 print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("==================================================================\n\n")
-
+save_cm(custom_metrics_dict["confusion_matrix"], "Model_2_NoSil_Dataset2", "Model 2 (No SIL) on Dataset 2 Confusion Matrix")
 
 #Predictions for Model 2 on Dataset 1:
 
@@ -54,6 +55,7 @@ print("Precision:", custom_metrics_dict["precision"])
 print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("===================================================================\n\n")
+save_cm(custom_metrics_dict["confusion_matrix"], "Model_2_NoSil_Dataset1", "Model 2 (No SIL) on Dataset 1 Confusion Matrix")
 
 
 """
@@ -69,6 +71,7 @@ print("Precision:", custom_metrics_dict["precision"])
 print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("===============================================================\n\n")
+save_cm(custom_metrics_dict["confusion_matrix"], "Model_2_Sil_Dataset2", "Model 2 (SIL) on Dataset 2 Confusion Matrix")
 
 
 #Predictions for SIL Model 2 on Dataset 1:
@@ -80,3 +83,4 @@ print("Precision:", custom_metrics_dict["precision"])
 print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("================================================================\n\n")
+save_cm(custom_metrics_dict["confusion_matrix"], "Model_2_Sil_Dataset1", "Model 2 (SIL) on Dataset 1 Confusion Matrix")

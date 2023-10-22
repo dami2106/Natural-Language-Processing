@@ -13,6 +13,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from Config_Manager import get_dataset, compute_metrics, SEED, CLASSES, EPOCHS, LEARNING_RATE, BATCH_SIZE, DEVICE
 
+from matplotlib import pyplot as plt
+
 """
 HYPER PARAMS FROM CONFIG FILE
 """
@@ -26,7 +28,6 @@ device = DEVICE
 
 dataset = get_dataset("naija")
 train_dataset = dataset["train"]
-test_dataset = dataset["test"]
 val_dataset = dataset["val"]
 del dataset
 
@@ -46,10 +47,14 @@ lr_scheduler = get_scheduler(
     name="linear", optimizer=optimizer, num_warmup_steps=0, num_training_steps=num_training_steps
 )
 
+train_epoch_loss = []
+val_epoch_loss = []
 
-model.train()
+
 progress_bar = tqdm(range(num_training_steps))
 for epoch in range(epochs):
+    model.train()
+    step_loss = []
     for i,batch in enumerate(train_dataloader):
         batch = {k: v.to(device) for k, v in batch.items()}
         outputs = model(**batch)
@@ -59,10 +64,33 @@ for epoch in range(epochs):
         optimizer.step()
         lr_scheduler.step()
         optimizer.zero_grad()
+
+        step_loss.append(loss.item())
+
         progress_bar.update(1)
 
-# writer.flush()
-# writer.close()
+    train_epoch_loss.append(np.mean(step_loss))
+
+    #Validation
+    model.eval()
+    for i,batch in enumerate(val_dataloader):
+        step_loss = []
+        batch = {k: v.to(device) for k, v in batch.items()}
+        outputs = model(**batch)
+        loss = outputs.loss
+        step_loss.append(loss.item())
+
+    val_epoch_loss.append(np.mean(step_loss))
+
+
+plt.plot(train_epoch_loss, label='Training Loss')
+plt.plot(val_epoch_loss,label='Validation Loss')
+plt.legend()
+plt.xticks(np.arange(0, len(train_epoch_loss), 1))
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.title("Model 1 Loss on Dataset 1 (NaijaSenti)")
+plt.savefig("Model_1_Loss.png", dpi = 300)
 
 #Save the model to disk
 model.save_pretrained("Saved_Models/model_1")
