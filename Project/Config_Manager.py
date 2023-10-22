@@ -18,6 +18,9 @@ CLASSES = 10
 EPOCHS = 3
 LEARNING_RATE = 5e-5
 BATCH_SIZE = 16
+GENERATIONS = 3
+STUDENT_EPOCHS = 5
+TEACHER_EPOCHS = 2
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 """
 =======================
@@ -147,7 +150,31 @@ def compute_metrics(logits, labels):
         "f1": f1_value['f1'],
         "precision": precision_value['precision'],
         "recall": recall_value['recall'],
-        "cohenkappa": cohens_kappa,
-        'val loss':100000000,
-
+        "cohenkappa": cohens_kappa
     }
+
+
+"""
+A function to evaluate the model on the provided dataloader, uses the custom metrics from above 
+PARAMS : model - the model to be evaluated
+         dataloader - the dataloader to be used for evaluation
+RETURN : a dictionary containing the metrics of the model
+"""
+def evaluate_model(model, dataloader):
+    model.eval()
+    true_labels = []
+    predicted_labels = []
+    for batch in dataloader:
+        batch = {k: v.to(DEVICE) for k, v in batch.items()}
+        with torch.no_grad():
+            outputs = model(**batch)
+
+        logits = outputs.logits
+        predictions = torch.argmax(logits, dim=-1)
+        true = batch["labels"]
+
+        true_labels.extend(true.cpu().numpy())
+        predicted_labels.extend(logits.cpu().numpy())
+
+    custom_metrics_dict = compute_metrics(np.array(predicted_labels), np.array(true_labels))
+    return custom_metrics_dict

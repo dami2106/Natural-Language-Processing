@@ -10,7 +10,6 @@ from torch import nn
 from tqdm.auto import tqdm
 import evaluate
 from torch.utils.tensorboard import SummaryWriter
-from zmq import device
 
 from Config_Manager import get_dataset, compute_metrics, SEED, CLASSES, EPOCHS, LEARNING_RATE, BATCH_SIZE, DEVICE
 
@@ -33,7 +32,7 @@ val_dataset = dataset["val"]
 del dataset
 
 #Load in the model that was saved before
-model = AutoModelForSequenceClassification.from_pretrained("model_1").to(device)
+model = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1").to(device)
 model.config.loss_name = "cross_entropy" #use cross entropy loss function
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 

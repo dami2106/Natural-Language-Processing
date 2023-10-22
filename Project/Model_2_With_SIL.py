@@ -25,71 +25,42 @@ from torch.optim import AdamW
 from torch.nn.functional import softmax
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import confusion_matrix
+from Config_Manager import get_dataset, compute_metrics, SEED, LEARNING_RATE, BATCH_SIZE, DEVICE, GENERATIONS, STUDENT_EPOCHS, TEACHER_EPOCHS
+
 
 """
-HYPER PARAMS
+HYPER PARAMS FROM CONFIG FILE
 """
-seed = 42
-classes = 7
-epochs = 1
-learning_rate = 0.0001
-batch_size = 32
-
-
-
-def tokenize_function(examples):
-    tokenizer = AutoTokenizer.from_pretrained("castorini/afriberta_base", use_fast=False)
-    tokenizer.model_max_length = 512
-    return tokenizer(examples["text"], padding="max_length", truncation=True)
-
-def compute_metrics(eval_pred):
-    logits, labels = eval_pred
-    predictions = np.argmax(logits, axis=-1)
-    metric = evaluate.load("accuracy")
-    return metric.compute(predictions=predictions, references=labels)
+seed = SEED
+learning_rate = LEARNING_RATE
+batch_size = BATCH_SIZE
+device = DEVICE
+generations = GENERATIONS
+student_epochs = STUDENT_EPOCHS
+teacher_epochs = TEACHER_EPOCHS
 
 def custom_loss(predictions, labels):
     loss_fn = torch.nn.CrossEntropyLoss()
     return loss_fn(predictions, labels)
 
-def get_accuracy(predictions, labels):
-    predicted_classes = torch.argmax(predictions, dim=1)
 
-    # Calculate accuracy
-    correct = (predicted_classes == labels).sum().item()
-    accuracy = correct / labels.size(0)  # Calculate accuracy as a fraction
-    return accuracy
-
-#Dataset --> label,text
-
-ds = load_dataset('masakhane/masakhanews', 'hau')
-ds = ds.remove_columns(["text", "url", "headline"])
-ds = ds.rename_column("label", "labels")
-ds = ds.rename_column("headline_text", "text")
-
-tokenized_datasets = ds.map(tokenize_function, batched=True)
-tokenized_datasets = tokenized_datasets.remove_columns(["text"])
-tokenized_datasets.set_format("torch")
-
-train_dataset = tokenized_datasets["train"].shuffle(seed=seed)
-test_dataset = tokenized_datasets["test"].shuffle(seed=seed)
-val_dataset = tokenized_datasets["validation"].shuffle(seed=seed)
-
-train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
+dataset = get_dataset("masakhane")
+train_dataset = dataset["train"]
+val_dataset = dataset["val"]
+del dataset
+train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
 
-
-device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 #Make the 2 models on the afriberta pre trained
-student_model = AutoModelForSequenceClassification.from_pretrained("castorini/afriberta_base", num_labels=classes)
-
-
-#select the optimizer
+student_model = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1").to(device)
+student_model.config.loss_name = "cross_entropy" #use cross entropy loss function
 student_optimizer = AdamW(student_model.parameters(), lr=learning_rate)
 
+student_model.train()
 
-training_steps = epochs * len(train_dataloader)
+num_training_steps = student_epochs * len(train_dataloader)
+training_steps = student_epochs * len(train_dataloader)
+
 lr_scheduler = get_scheduler(
     name="linear",
     optimizer=student_optimizer,
@@ -98,24 +69,18 @@ lr_scheduler = get_scheduler(
 )
 
 
-student_model.to(device)
-
-
 prog_bar = tqdm(range(training_steps))
+for gen in range(generations):
+    teacher_model = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1").to(device)
+    teacher_model.config.loss_name = "cross_entropy" #use cross entropy loss function
 
-student_model.train()
-
-for epoch in range(epochs):
-
-    teacher_model = AutoModelForSequenceClassification.from_pretrained("castorini/afriberta_base", num_labels=classes)
-    teacher_model.to(device)
     #copy the student model to be the teacher model
     teacher_model.load_state_dict(student_model.state_dict())
     
     #define optimizer & scheduler for teacher model
     teacher_optimizer = AdamW(teacher_model.parameters(), lr=learning_rate)
     teacher_optimizer.zero_grad()
-    training_steps_1 = epochs * len(train_dataloader)
+    training_steps_1 = teacher_epochs * len(train_dataloader)
     lr_scheduler_1 = get_scheduler(
         name="linear",
         optimizer=teacher_optimizer,
@@ -123,64 +88,48 @@ for epoch in range(epochs):
         num_warmup_steps=0
     )
 
-    
-    for batch in train_dataloader:
-        #First train the teacher model 
-        batch = {k : v.to(device) for k, v in batch.items()}
-        teacher_model.train()
-        outputs = teacher_model(**batch)
-            
-        loss = outputs.loss
-        loss.backward()
-        teacher_optimizer.step()
-        lr_scheduler_1.step()
-        teacher_optimizer.zero_grad()
-        prog_bar.update(1)
+    new_batch = []
+    for te in range(teacher_epochs):
+        new_batch = [] #Empty it so we only take the last set
+        for batch in train_dataloader:
+            #First train the teacher model 
+            batch = {k : v.to(device) for k, v in batch.items()}
+            teacher_model.train()
+            outputs = teacher_model(**batch)
+                
+            loss = outputs.loss
+            loss.backward()
+            teacher_optimizer.step()
+            lr_scheduler_1.step()
+            teacher_optimizer.zero_grad()
+            prog_bar.update(1)
 
-        # Get teacher model predictions for the inputs next (new labels)
+            # Get teacher model predictions for the inputs next (new labels)
 
-        with torch.no_grad():
-            teacher_logits = teacher_model(**batch).logits
+            with torch.no_grad():
+                teacher_logits = teacher_model(**batch).logits
 
-        # softmax the teacher logits for pseudo-labels
-        pseudo_labels = softmax(teacher_logits, dim=1) #--> no argmax just use raw softmax
+            # softmax the teacher logits for pseudo-labels
+            pseudo_labels = softmax(teacher_logits, dim=1) #--> no argmax just use raw softmax
 
-        # Train the student model using the teacher pseudo-labels
-        student_model.train()
-        student_optimizer.zero_grad()
-        student_logits = student_model(**batch).logits
+            temp_batch = batch.copy()
+            temp_batch["labels"] = pseudo_labels
+            new_batch.append(temp_batch)
 
-
-        loss = custom_loss(student_logits, pseudo_labels)
-        loss.backward()
+    for se in range(student_epochs):
+        for batch in new_batch:
+            batch = {k : v.to(device) for k, v in batch.items()}
+            # Train the student model using the teacher pseudo-labels
+            student_model.train()
+            student_optimizer.zero_grad()
+            student_logits = student_model(**batch).logits
+            loss = custom_loss(student_logits, batch["labels"])
+            loss.backward()
+            student_optimizer.step()
+            lr_scheduler.step()
         
-        student_optimizer.step()
 
-    student_model.eval()
-    with torch.no_grad():
-        predictions = []
-        true_labels = []
-
-        for val_batch in val_dataloader:
-            val_batch = {k: v.to(device) for k, v in val_batch.items()}
-            val_outputs = student_model(**val_batch)
-            val_logits = val_outputs.logits
-
-            # Assuming your labels are in the batch as 'labels'
-            true_labels.extend(val_batch['labels'].cpu().numpy())
-            
-            # Calculate predictions (e.g., argmax of the logits)
-            predictions.extend(val_logits.argmax(dim=1).cpu().numpy())
-
-        #confusion matrix
-        print(confusion_matrix(true_labels, predictions))
-        # Calculate accuracy as an example evaluation metric
-        accuracy = accuracy_score(true_labels, predictions)
-        print(f"Validation Accuracy: {accuracy}")
-
-        
-        # Put in eval mode
-        #student_model.eval()
-
+#Save the student model 
+student_model.save_pretrained("Saved_Models/model_2_SIL_2")
 
 
