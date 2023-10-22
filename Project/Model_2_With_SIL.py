@@ -1,12 +1,12 @@
-# %%
-!pip install --no-cache-dir transformers sentencepiece
-!pip install torch tensorflow
-!pip install datasets
-!pip install transformers[torch]
-!pip install accelerate -U
-!pip install evaluate
+# 
+# !pip install --no-cache-dir transformers sentencepiece
+# !pip install torch tensorflow
+# !pip install datasets
+# !pip install transformers[torch]
+# !pip install accelerate -U
+# !pip install evaluate
 
-# %%
+
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoModelForTokenClassification
 import pandas as pd
 from  datasets  import  load_dataset
@@ -23,15 +23,17 @@ from tqdm.auto import tqdm
 import evaluate
 from torch.optim import AdamW
 from torch.nn.functional import softmax
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import confusion_matrix
 
 """
 HYPER PARAMS
 """
 seed = 42
 classes = 7
-epochs = 3
+epochs = 1
 learning_rate = 0.0001
-batch_size = 16
+batch_size = 32
 
 
 
@@ -77,16 +79,14 @@ train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True
 test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
 
-# %%
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 #Make the 2 models on the afriberta pre trained
 student_model = AutoModelForSequenceClassification.from_pretrained("castorini/afriberta_base", num_labels=classes)
-teacher_model = AutoModelForSequenceClassification.from_pretrained("castorini/afriberta_base", num_labels=classes)
+
 
 #select the optimizer
 student_optimizer = AdamW(student_model.parameters(), lr=learning_rate)
-
 
 
 training_steps = epochs * len(train_dataloader)
@@ -98,21 +98,23 @@ lr_scheduler = get_scheduler(
 )
 
 
-
-
 student_model.to(device)
-teacher_model.to(device)
+
 
 prog_bar = tqdm(range(training_steps))
 
 student_model.train()
 
 for epoch in range(epochs):
+
+    teacher_model = AutoModelForSequenceClassification.from_pretrained("castorini/afriberta_base", num_labels=classes)
+    teacher_model.to(device)
     #copy the student model to be the teacher model
     teacher_model.load_state_dict(student_model.state_dict())
     
     #define optimizer & scheduler for teacher model
     teacher_optimizer = AdamW(teacher_model.parameters(), lr=learning_rate)
+    teacher_optimizer.zero_grad()
     training_steps_1 = epochs * len(train_dataloader)
     lr_scheduler_1 = get_scheduler(
         name="linear",
@@ -125,32 +127,60 @@ for epoch in range(epochs):
     for batch in train_dataloader:
         #First train the teacher model 
         batch = {k : v.to(device) for k, v in batch.items()}
+        teacher_model.train()
         outputs = teacher_model(**batch)
+            
         loss = outputs.loss
         loss.backward()
         teacher_optimizer.step()
-        lr_scheduler.step()
+        lr_scheduler_1.step()
         teacher_optimizer.zero_grad()
         prog_bar.update(1)
 
         # Get teacher model predictions for the inputs next (new labels)
 
         with torch.no_grad():
-            teacher_logits = outputs.logits
+            teacher_logits = teacher_model(**batch).logits
 
         # softmax the teacher logits for pseudo-labels
-        pseudo_labels = torch.argmax(softmax(teacher_logits, dim=1), dim=1) #--> no argmaxx just use raw softmax
+        pseudo_labels = softmax(teacher_logits, dim=1) #--> no argmax just use raw softmax
 
         # Train the student model using the teacher pseudo-labels
         student_model.train()
         student_optimizer.zero_grad()
         student_logits = student_model(**batch).logits
+
+
         loss = custom_loss(student_logits, pseudo_labels)
         loss.backward()
+        
         student_optimizer.step()
 
-        # Evaluate the student model on the validation dataset
-        student_model.eval()
+    student_model.eval()
+    with torch.no_grad():
+        predictions = []
+        true_labels = []
+
+        for val_batch in val_dataloader:
+            val_batch = {k: v.to(device) for k, v in val_batch.items()}
+            val_outputs = student_model(**val_batch)
+            val_logits = val_outputs.logits
+
+            # Assuming your labels are in the batch as 'labels'
+            true_labels.extend(val_batch['labels'].cpu().numpy())
+            
+            # Calculate predictions (e.g., argmax of the logits)
+            predictions.extend(val_logits.argmax(dim=1).cpu().numpy())
+
+        #confusion matrix
+        print(confusion_matrix(true_labels, predictions))
+        # Calculate accuracy as an example evaluation metric
+        accuracy = accuracy_score(true_labels, predictions)
+        print(f"Validation Accuracy: {accuracy}")
+
+        
+        # Put in eval mode
+        #student_model.eval()
 
 
 
