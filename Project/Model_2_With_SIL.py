@@ -49,9 +49,11 @@ def custom_loss(predictions, labels):
 dataset = get_dataset("masakhane")
 train_dataset = dataset["train"]
 val_dataset = dataset["val"]
+val_dataset_d1 = get_dataset("naija")["val"]
 del dataset
 train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
+val_dataloader_d1 = DataLoader(val_dataset_d1, batch_size=batch_size)
 
 #Make the 2 models on the afriberta pre trained
 student_model = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1").to(device)
@@ -75,6 +77,7 @@ prog_bar = tqdm(range(training_steps))
 
 train_epoch_loss = []
 val_epoch_loss = []
+val_epoch_loss_d1 = []
 
 for gen in range(generations):
     teacher_model = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1").to(device)
@@ -141,7 +144,7 @@ for gen in range(generations):
     train_epoch_loss.append(np.mean(se_loss))
         
     
-    #Evaluate the model on the validation set
+    #Evaluate the model on the validation set for dataset 2
     student_model.eval()
     step_loss = []
     for batch in val_dataloader:
@@ -151,15 +154,28 @@ for gen in range(generations):
         step_loss.append(loss.item())
     
     val_epoch_loss.append(np.mean(step_loss))
+
+    #Evaluate the model on the validation set for dataset 1
+    student_model.eval()
+    step_loss = []
+    for batch in val_dataloader_d1:
+        batch = {k: v.to(device) for k, v in batch.items()}
+        outputs = student_model(**batch)
+        loss = outputs.loss
+        step_loss.append(loss.item())
+    
+    val_epoch_loss_d1.append(np.mean(step_loss))
+    
     
         
 plt.plot(train_epoch_loss, label='Training Loss')
-plt.plot(val_epoch_loss,label='Validation Loss')
+plt.plot(val_epoch_loss,label='Validation Loss Dataset 2')
+plt.plot(val_epoch_loss_d1,label='Validation Loss Dataset 1')
 plt.legend()
 plt.xticks(np.arange(0, len(train_epoch_loss), 1))
 plt.xlabel("Generation")
 plt.ylabel("Loss")
-plt.title("Model 2 with SIL Loss on Dataset 2 (MasaKhaneNews)")
+plt.title("Model 2 with SIL Loss")
 plt.savefig("Model_2_SIL_Loss.png", dpi = 300)
 
 #Save the student model 
