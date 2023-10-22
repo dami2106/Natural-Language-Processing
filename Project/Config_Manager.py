@@ -15,9 +15,9 @@ HYPER PARAMS FOR MODELS
 """
 SEED = 42
 CLASSES = 10
-EPOCHS = 1
+EPOCHS = 3
 LEARNING_RATE = 5e-5
-BATCH_SIZE = 128
+BATCH_SIZE = 16
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 """
 =======================
@@ -94,6 +94,7 @@ def get_dataset(dataset, seed = 42):
         #tokenize the data set
         tokenized_datasets = construct_labels(ds, 2)
 
+    del ds
 
     tokenized_datasets = tokenized_datasets.map(tokenize_function, batched=True)
     tokenized_datasets = tokenized_datasets.remove_columns(["text"])
@@ -103,6 +104,8 @@ def get_dataset(dataset, seed = 42):
     train_dataset = tokenized_datasets["train"].shuffle(seed=seed)
     test_dataset = tokenized_datasets["test"].shuffle(seed=seed)
     val_dataset = tokenized_datasets["validation"].shuffle(seed=seed)
+
+    del tokenized_datasets
 
     return {
         "train" : train_dataset,
@@ -117,7 +120,7 @@ PARAMS : logits - the logits of the model
          labels - the labels of the model
 RETURN : a dictionary containing the metrics of the model
 """
-def compute_metrics(logits,labels):
+def compute_metrics(logits, labels):
     # logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
     labels=np.argmax(labels, axis=-1)
@@ -134,7 +137,7 @@ def compute_metrics(logits,labels):
 
     f1_value = f1.compute(predictions=predictions, references=labels, average='weighted')  # You can adjust 'average' if needed
     precision_value = precision.compute(predictions=predictions, references=labels, average='weighted')  # You can adjust 'average' if needed
-    recall_value = recall.compute(predictions=predictions, references=labels, average='weighted')  # You can adjust 'average' if needed
+    recall_value = recall.compute(predictions=predictions, references=labels, average='weighted', zero_division=0.0)  # You can adjust 'average' if needed
 
     cohens_kappa=cohen_kappa_score(labels, predictions)
 
