@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from Config_Manager import get_dataset, compute_metrics, evaluate_model, SEED, CLASSES, EPOCHS, LEARNING_RATE, BATCH_SIZE, DEVICE, save_cm
 from sklearn import metrics
 import matplotlib.pyplot as plt
+import numpy as np
 """
 HYPER PARAMS FROM CONFIG FILE
 """
@@ -33,7 +34,8 @@ print("Precision:", custom_metrics_dict["precision"])
 print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("==============================================================\n\n")
-save_cm(custom_metrics_dict["confusion_matrix"], "Model_1_Dataset1", "Model 1 on Dataset 1 Confusion Matrix")
+print(custom_metrics_dict["confusion_matrix"])
+save_cm(custom_metrics_dict["confusion_matrix"], "Model_1_Dataset1", "Model 1 on Dataset 1 Confusion Matrix") #3x3 confusion matrix
 
 custom_metrics_dict = evaluate_model(model_2_no_sil, test_2_dataloader)
 print("===========NO SIL MODEL ON DATASET 2 (Masakhane) REPORT===========")
@@ -43,9 +45,11 @@ print("Precision:", custom_metrics_dict["precision"])
 print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("==================================================================\n\n")
-save_cm(custom_metrics_dict["confusion_matrix"], "Model_2_NoSil_Dataset2", "Model 2 (No SIL) on Dataset 2 Confusion Matrix")
+save_cm(custom_metrics_dict["confusion_matrix"], "Model_2_NoSil_Dataset2", "Model 2 (No SIL) on Dataset 2 Confusion Matrix") #10x10 confusion matrix
 
-#Predictions for Model 2 on Dataset 1:
+# #Predictions for Model 2 on Dataset 1:
+
+
 
 custom_metrics_dict = evaluate_model(model_2_no_sil, test_1_dataloader)
 print("===========NO SIL MODEL ON DATASET 1 (NaijaSenti) REPORT===========")
@@ -58,9 +62,9 @@ print("===================================================================\n\n")
 save_cm(custom_metrics_dict["confusion_matrix"], "Model_2_NoSil_Dataset1", "Model 2 (No SIL) on Dataset 1 Confusion Matrix")
 
 
-"""
-SIL MODEL 
-"""
+# """
+# SIL MODEL 
+# """
 
 #Predictions for SIL Model 2 on Dataset 2:
 custom_metrics_dict = evaluate_model(model_2_sil, test_2_dataloader)

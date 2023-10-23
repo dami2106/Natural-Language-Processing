@@ -143,7 +143,20 @@ def compute_metrics(logits, labels):
 
     cohens_kappa=cohen_kappa_score(labels, predictions)
 
-    conf_matrx = confusion_matrix(labels, predictions)
+    label_names = [
+        "Positive",
+        "Neutral",
+        "Negative",
+
+        "Business",
+        "Entertainment",
+        "Health",
+        "Politics",
+        "Religion",
+        "Sport",
+        "Technology"
+    ]
+    conf_matrx = confusion_matrix(labels, predictions, labels=np.arange(10))
 
     return {
         "accuracy": accuracy['accuracy'],
