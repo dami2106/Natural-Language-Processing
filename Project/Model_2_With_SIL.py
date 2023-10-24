@@ -1,34 +1,14 @@
-# 
-# !pip install --no-cache-dir transformers sentencepiece
-# !pip install torch tensorflow
-# !pip install datasets
-# !pip install transformers[torch]
-# !pip install accelerate -U
-# !pip install evaluate
-
-
-from matplotlib.pyplot import step
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoModelForTokenClassification
-import pandas as pd
-from  datasets  import  load_dataset
-from transformers import TrainingArguments
-from transformers import Trainer
+from transformers import AutoModelForSequenceClassification
 import numpy as np
-import evaluate
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from transformers import get_scheduler
 import torch
-from torch import nn
 from tqdm.auto import tqdm
-import evaluate
 from torch.optim import AdamW
 from torch.nn.functional import softmax
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import confusion_matrix
-from Config_Manager import get_dataset, compute_metrics, SEED, LEARNING_RATE, BATCH_SIZE, DEVICE, GENERATIONS, STUDENT_EPOCHS, TEACHER_EPOCHS
-
-from matplotlib import pyplot as plt
+from Config_Manager import get_dataset, SEED, LEARNING_RATE, BATCH_SIZE, DEVICE, GENERATIONS, STUDENT_EPOCHS, TEACHER_EPOCHS
+import sys
 
 """
 HYPER PARAMS FROM CONFIG FILE
@@ -119,7 +99,7 @@ for gen in range(generations):
                 teacher_logits = teacher_model(**batch).logits
 
             # softmax the teacher logits for pseudo-labels
-            pseudo_labels = softmax(teacher_logits, dim=1) #--> no argmax just use raw softmax
+            pseudo_labels = softmax(teacher_logits, dim=1) 
 
             temp_batch = batch.copy()
             temp_batch["labels"] = pseudo_labels
@@ -166,17 +146,26 @@ for gen in range(generations):
     
     val_epoch_loss_d1.append(np.mean(step_loss))
     
-    
-        
-plt.plot(train_epoch_loss, label='Training Loss')
-plt.plot(val_epoch_loss,label='Validation Loss Dataset 2')
-plt.plot(val_epoch_loss_d1,label='Validation Loss Dataset 1')
-plt.legend()
-plt.xticks(np.arange(0, len(train_epoch_loss), 1))
-plt.xlabel("Generation")
-plt.ylabel("Loss")
-plt.title("Model 2 with SIL Loss")
-plt.savefig("Model_2_SIL_Loss.png", dpi = 300)
 
-#Save the student model 
-student_model.save_pretrained("Saved_Models/model_2_SIL_2")
+loss_data = [
+    train_epoch_loss,
+    val_epoch_loss,
+    val_epoch_loss_d1
+]
+
+loss_data = np.array(loss_data)
+
+np.save(f"Saved_Models/model_2_SIL/model_2_SIL_Loss_{sys.argv[1]}.npy", loss_data)
+        
+# plt.plot(train_epoch_loss, label='Training Loss')
+# plt.plot(val_epoch_loss,label='Validation Loss Dataset 2')
+# plt.plot(val_epoch_loss_d1,label='Validation Loss Dataset 1')
+# plt.legend()
+# plt.xticks(np.arange(0, len(train_epoch_loss), 1))
+# plt.xlabel("Generation")
+# plt.ylabel("Loss")
+# plt.title("Model 2 with SIL Loss")
+# plt.savefig("Model_2_SIL_Loss.png", dpi = 300)
+
+# #Save the student model 
+# student_model.save_pretrained("Saved_Models/model_2_SIL_2")

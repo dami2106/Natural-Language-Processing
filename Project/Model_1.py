@@ -1,19 +1,13 @@
 #IMPORTS
 from transformers import AutoModelForSequenceClassification
 import numpy as np
-import evaluate
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from transformers import get_scheduler
-import torch
-from torch import nn
 from tqdm.auto import tqdm
-import evaluate
-from torch.utils.tensorboard import SummaryWriter
-
-from Config_Manager import get_dataset, compute_metrics, SEED, CLASSES, EPOCHS, LEARNING_RATE, BATCH_SIZE, DEVICE
-
+from Config_Manager import get_dataset, SEED, CLASSES, EPOCHS, LEARNING_RATE, BATCH_SIZE, DEVICE
 from matplotlib import pyplot as plt
+import sys
 
 """
 HYPER PARAMS FROM CONFIG FILE
@@ -83,17 +77,27 @@ for epoch in range(epochs):
     val_epoch_loss.append(np.mean(step_loss))
 
 
-plt.plot(train_epoch_loss, label='Training Loss')
-plt.plot(val_epoch_loss,label='Validation Loss')
-plt.legend()
-plt.xticks(np.arange(0, len(train_epoch_loss), 1))
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.title("Model 1 Loss on Dataset 1 (NaijaSenti)")
-plt.savefig("Model_1_Loss.png", dpi = 300)
+loss_data = [
+    train_epoch_loss,
+    val_epoch_loss
+]
 
-#Save the model to disk
-model.save_pretrained("Saved_Models/model_1")
+loss_data = np.array(loss_data)
+
+np.save(f"Saved_Models/model_1/Model_1_Loss_{sys.argv[1]}.npy", loss_data)
+
+
+# plt.plot(train_epoch_loss, label='Training Loss')
+# plt.plot(val_epoch_loss,label='Validation Loss')
+# plt.legend()
+# plt.xticks(np.arange(0, len(train_epoch_loss), 1))
+# plt.xlabel("Epoch")
+# plt.ylabel("Loss")
+# plt.title("Model 1 Loss on Dataset 1 (NaijaSenti)")
+# plt.savefig("Model_1_Loss.png", dpi = 300)
+
+# #Save the model to disk
+# model.save_pretrained("Saved_Models/model_1")
 
 
 
