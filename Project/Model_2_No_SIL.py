@@ -29,11 +29,13 @@ model = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1
 model.config.loss_name = "cross_entropy" #use cross entropy loss function
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 
+#create data loaders
+#create validation data loader for both data sets 1 and 2
 train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
 val_dataloader_d1 = DataLoader(val_dataset_d1, batch_size=batch_size)
 
-num_training_steps = epochs * len(train_dataloader)
+num_training_steps = epochs * len(train_dataloader) #calculate number of training steps
 
 lr_scheduler = get_scheduler(
     name="linear", optimizer=optimizer, num_warmup_steps=0, num_training_steps=num_training_steps
@@ -43,13 +45,14 @@ train_epoch_loss = []
 val_epoch_loss = []
 val_epoch_loss_d1 = []
 
+#train model
 progress_bar = tqdm(range(num_training_steps))
 for epoch in range(epochs):
     step_loss = []
     model.train()
-    for batch in train_dataloader:
+    for batch in train_dataloader: #iterate through training data
         batch = {k: v.to(device) for k, v in batch.items()}
-        outputs = model(**batch)
+        outputs = model(**batch) #get model outputs
         loss = outputs.loss
         loss.backward()
 
@@ -57,11 +60,11 @@ for epoch in range(epochs):
         lr_scheduler.step()
         optimizer.zero_grad()
 
-        step_loss.append(loss.item())
+        step_loss.append(loss.item()) #store loss
 
         progress_bar.update(1)
     
-    train_epoch_loss.append(np.mean(step_loss))
+    train_epoch_loss.append(np.mean(step_loss)) #store training loss, averaged over batch
 
     #Evaluate the model on the validation set
     model.eval()
@@ -70,19 +73,20 @@ for epoch in range(epochs):
         batch = {k: v.to(device) for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs.loss
-        step_loss.append(loss.item())
+        step_loss.append(loss.item()) #store validation loss
 
-    val_epoch_loss.append(np.mean(step_loss))
+    val_epoch_loss.append(np.mean(step_loss)) #append validation loss, averaged over batch
 
+    #calculate validation loss for data set 1 on model 2
     model.eval()
     step_loss = []
     for batch in val_dataloader_d1:
         batch = {k: v.to(device) for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs.loss
-        step_loss.append(loss.item())
+        step_loss.append(loss.item()) #get validation loss
 
-    val_epoch_loss_d1.append(np.mean(step_loss))
+    val_epoch_loss_d1.append(np.mean(step_loss)) #store validation loss, averaged over batch
 
 
 loss_data = [
