@@ -79,7 +79,7 @@ for gen in range(generations):
 
     new_batch = []
     for te in range(teacher_epochs):
-        new_batch = [] #Empty it so we only take the last set
+        new_batch = [] #Empty it so we only take the last set of pseudo labels from the last epoch 
         for batch in train_dataloader:
             #First train the teacher model 
             batch = {k : v.to(device) for k, v in batch.items()}
@@ -121,6 +121,7 @@ for gen in range(generations):
             step_loss.append(loss.item())
         se_loss.append(np.mean(step_loss))
     
+    #Loss for 1 generation averaged over the n student epochs 
     train_epoch_loss.append(np.mean(se_loss))
         
     
@@ -155,8 +156,10 @@ loss_data = [
 
 loss_data = np.array(loss_data)
 
+#Save the student model 
+student_model.save_pretrained("Saved_Models/model_2_SIL")
+
 np.save(f"Saved_Models/model_2_SIL/model_2_SIL_Loss_{sys.argv[1]}.npy", loss_data)
 
 
-#Save the student model 
-# student_model.save_pretrained("Saved_Models/model_2_SIL")
+

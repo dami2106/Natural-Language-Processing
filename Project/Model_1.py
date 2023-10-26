@@ -66,8 +66,8 @@ for epoch in range(epochs):
 
     #Validation
     model.eval()
+    step_loss = []
     for i,batch in enumerate(val_dataloader):
-        step_loss = []
         batch = {k: v.to(device) for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs.loss
@@ -83,20 +83,12 @@ loss_data = [
 
 loss_data = np.array(loss_data)
 
+#Save the model to disk
+model.save_pretrained("Saved_Models/model_1")
+
 np.save(f"Saved_Models/model_1/Model_1_Loss_{sys.argv[1]}.npy", loss_data)
 
 
-# plt.plot(train_epoch_loss, label='Training Loss')
-# plt.plot(val_epoch_loss,label='Validation Loss')
-# plt.legend()
-# plt.xticks(np.arange(0, len(train_epoch_loss), 1))
-# plt.xlabel("Epoch")
-# plt.ylabel("Loss")
-# plt.title("Model 1 Loss on Dataset 1 (NaijaSenti)")
-# plt.savefig("Model_1_Loss.png", dpi = 300)
-
-# #Save the model to disk
-# model.save_pretrained("Saved_Models/model_1")
 
 
 

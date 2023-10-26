@@ -193,6 +193,7 @@ def save_cm(cm, name, title):
     plt.ylabel('True Labels', fontsize=14)
     plt.title(f'{title}', fontsize=16)
     plt.savefig(f'Plots/{name}.png', dpi=300)
+    plt.close()
 
 """
 A function to plot the loss curves of model 1
@@ -222,6 +223,7 @@ def plot_model_1_loss(runs = 3):
     plt.ylabel("Loss")
     plt.title("Model 1 Loss on Dataset 1 (NaijaSenti)")
     plt.savefig("Plots/Model_1_Loss.png", dpi = 300)
+    plt.close()
 
 
 
@@ -270,5 +272,7 @@ def plot_model_2_loss(runs = 3, SIL = True):
         plt.xlabel("Epoch")
         plt.title("Model 2 Without SIL Loss on Dataset 1 & 2")
         plt.savefig("Plots/Model_2_No_SIL_Loss", dpi = 300)
+    
+    plt.close()
         
     
