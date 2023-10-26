@@ -33,6 +33,7 @@ model = AutoModelForSequenceClassification.from_pretrained("castorini/afriberta_
 model.config.loss_name = "cross_entropy" #use cross entropy loss function
 optimizer = AdamW(model.parameters(), lr=learning_rate)
 
+#create data loader
 train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
 num_training_steps = epochs * len(train_dataloader)
@@ -44,14 +45,15 @@ lr_scheduler = get_scheduler(
 train_epoch_loss = []
 val_epoch_loss = []
 
+#train model
 progress_bar = tqdm(range(num_training_steps))
 for epoch in range(epochs):
     model.train()
     step_loss = []
-    for i,batch in enumerate(train_dataloader):
+    for i,batch in enumerate(train_dataloader): #iterate through data loader
         batch = {k: v.to(device) for k, v in batch.items()}
-        outputs = model(**batch)
-        loss = outputs.loss
+        outputs = model(**batch) #get outputs of model
+        loss = outputs.loss #calculate loss
         loss.backward()
 
         optimizer.step()
@@ -62,18 +64,18 @@ for epoch in range(epochs):
 
         progress_bar.update(1)
 
-    train_epoch_loss.append(np.mean(step_loss))
+    train_epoch_loss.append(np.mean(step_loss)) #store training loss, averaged over batch
 
     #Validation
     model.eval()
     step_loss = []
-    for i,batch in enumerate(val_dataloader):
+    for i,batch in enumerate(val_dataloader): #calculate validation loss
         batch = {k: v.to(device) for k, v in batch.items()}
         outputs = model(**batch)
         loss = outputs.loss
         step_loss.append(loss.item())
 
-    val_epoch_loss.append(np.mean(step_loss))
+    val_epoch_loss.append(np.mean(step_loss)) #store validation loss, averaged over batch
 
 
 loss_data = [
