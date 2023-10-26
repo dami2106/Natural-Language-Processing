@@ -33,7 +33,6 @@ print("Precision:", custom_metrics_dict["precision"])
 print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("==============================================================\n\n")
-print(custom_metrics_dict["confusion_matrix"])
 save_cm(custom_metrics_dict["confusion_matrix"], "Model_1_Dataset1", "Model 1 on Dataset 1 Confusion Matrix") #3x3 confusion matrix
 
 custom_metrics_dict = evaluate_model(model_2_no_sil, test_2_dataloader)

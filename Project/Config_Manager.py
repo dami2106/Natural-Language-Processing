@@ -197,8 +197,9 @@ def save_cm(cm, name, title):
 
 """
 A function to plot the loss curves of model 1
+PARAMS : runs - the number of runs to plot
 """
-def plot_model_1_loss(runs = 3):
+def plot_model_1_loss(runs = 2):
     val_loss = []
     train_loss = []
     for i in range(runs):
@@ -221,13 +222,18 @@ def plot_model_1_loss(runs = 3):
     plt.xticks(np.arange(0, len(train_loss_mean), 1))
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
+    plt.ylim(0, 1)
     plt.title("Model 1 Loss on Dataset 1 (NaijaSenti)")
     plt.savefig("Plots/Model_1_Loss.png", dpi = 300)
     plt.close()
 
 
-
-def plot_model_2_loss(runs = 3, SIL = True):
+"""
+A function to plot the loss curves of model 2 with and witout SIL
+PARAMS : SIL - whether to plot the model with or without SIL
+         runs - the number of runs to plot
+"""
+def plot_model_2_loss(runs = 2, SIL = True):
     val_loss_d1 = []
     val_loss_d2 = []
     train_loss = []
@@ -261,6 +267,7 @@ def plot_model_2_loss(runs = 3, SIL = True):
 
     plt.legend()
     plt.xticks(np.arange(0, len(train_loss_mean), 1))
+    plt.ylim(0, 1)
     
     plt.ylabel("Loss")
 
