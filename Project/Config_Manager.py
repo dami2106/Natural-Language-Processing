@@ -20,8 +20,8 @@ EPOCHS = 3
 LEARNING_RATE = 5e-5
 BATCH_SIZE = 16
 GENERATIONS = 3
-STUDENT_EPOCHS = 5
-TEACHER_EPOCHS = 2
+STUDENT_EPOCHS = 3
+TEACHER_EPOCHS = 3
 DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 """
 =======================
@@ -143,20 +143,7 @@ def compute_metrics(logits, labels):
 
     cohens_kappa=cohen_kappa_score(labels, predictions)
 
-    label_names = [
-        "Positive",
-        "Neutral",
-        "Negative",
-
-        "Business",
-        "Entertainment",
-        "Health",
-        "Politics",
-        "Religion",
-        "Sport",
-        "Technology"
-    ]
-    conf_matrx = confusion_matrix(labels, predictions, labels=np.arange(10))
+    conf_matrx = confusion_matrix(labels, predictions, labels=np.arange(CLASSES))
 
     return {
         "accuracy": accuracy['accuracy'],
@@ -206,3 +193,82 @@ def save_cm(cm, name, title):
     plt.ylabel('True Labels', fontsize=14)
     plt.title(f'{title}', fontsize=16)
     plt.savefig(f'Plots/{name}.png', dpi=300)
+
+"""
+A function to plot the loss curves of model 1
+"""
+def plot_model_1_loss(runs = 3):
+    val_loss = []
+    train_loss = []
+    for i in range(runs):
+        model_1_loss = np.load(f"Saved_Models/model_1/Model_1_Loss_{i + 1}.npy")
+        train_loss.append(model_1_loss[0])
+        val_loss.append(model_1_loss[1])
+    
+    train_loss_mean = np.mean(np.array(train_loss), axis=0)
+    val_loss_mean = np.mean(np.array(val_loss), axis=0)
+    train_loss_var = np.var(np.array(train_loss), axis=0)
+    val_loss_var = np.var(np.array(val_loss), axis=0)
+
+    plt.plot(train_loss_mean, label='Training Loss')
+    plt.plot(val_loss_mean,label='Validation Loss')
+
+    plt.fill_between(np.arange(0, len(train_loss_mean), 1), train_loss_mean - train_loss_var, train_loss_mean + train_loss_var, alpha=0.2, color='r')
+    plt.fill_between(np.arange(0, len(val_loss_mean), 1), val_loss_mean - val_loss_var, val_loss_mean + val_loss_var, alpha=0.2, color='g')
+
+    plt.legend()
+    plt.xticks(np.arange(0, len(train_loss_mean), 1))
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title("Model 1 Loss on Dataset 1 (NaijaSenti)")
+    plt.savefig("Plots/Model_1_Loss.png", dpi = 300)
+
+
+
+def plot_model_2_loss(runs = 3, SIL = True):
+    val_loss_d1 = []
+    val_loss_d2 = []
+    train_loss = []
+    
+    for i in range(runs):
+        if SIL :
+            model_1_loss = np.load(f"Saved_Models/model_2_SIL/Model_2_SIL_Loss_{i + 1}.npy")
+        else:
+            model_1_loss = np.load(f"Saved_Models/model_2_No_SIL/Model_2_No_SIL_Loss_{i + 1}.npy")
+
+        train_loss.append(model_1_loss[0])
+        val_loss_d1.append(model_1_loss[2])
+        val_loss_d2.append(model_1_loss[1])
+    
+    train_loss_mean = np.mean(np.array(train_loss), axis=0)
+    val_loss_mean_d1 = np.mean(np.array(val_loss_d1), axis=0)
+    val_loss_mean_d2 = np.mean(np.array(val_loss_d2), axis=0)
+
+    train_loss_var = np.var(np.array(train_loss), axis=0)
+    val_loss_var_d1 = np.var(np.array(val_loss_d1), axis=0)
+    val_loss_var_d2 = np.var(np.array(val_loss_d2), axis=0)
+    
+
+    plt.plot(train_loss_mean, label='Training Loss', color = 'r')
+    plt.plot(val_loss_mean_d1, label='Validation Loss Dataset 1', color = 'g')
+    plt.plot(val_loss_mean_d2, label='Validation Loss Dataset 2', color = 'b')
+
+    plt.fill_between(np.arange(0, len(train_loss_mean), 1), train_loss_mean - train_loss_var, train_loss_mean + train_loss_var, alpha=0.2, color='r')
+    plt.fill_between(np.arange(0, len(val_loss_mean_d1), 1), val_loss_mean_d1 - val_loss_var_d1, val_loss_mean_d1 + val_loss_var_d1, alpha=0.2, color='g')
+    plt.fill_between(np.arange(0, len(val_loss_mean_d2), 1), val_loss_mean_d2 - val_loss_var_d2, val_loss_mean_d2 + val_loss_var_d2, alpha=0.2, color='b')
+
+    plt.legend()
+    plt.xticks(np.arange(0, len(train_loss_mean), 1))
+    
+    plt.ylabel("Loss")
+
+    if SIL:
+        plt.xlabel("Generation")
+        plt.title("Model 2 With SIL Loss on Dataset 1 & 2")
+        plt.savefig("Plots/Model_2_SIL_Loss", dpi = 300)
+    else:
+        plt.xlabel("Epoch")
+        plt.title("Model 2 Without SIL Loss on Dataset 1 & 2")
+        plt.savefig("Plots/Model_2_No_SIL_Loss", dpi = 300)
+        
+    

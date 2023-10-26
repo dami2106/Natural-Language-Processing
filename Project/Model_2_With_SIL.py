@@ -156,16 +156,7 @@ loss_data = [
 loss_data = np.array(loss_data)
 
 np.save(f"Saved_Models/model_2_SIL/model_2_SIL_Loss_{sys.argv[1]}.npy", loss_data)
-        
-# plt.plot(train_epoch_loss, label='Training Loss')
-# plt.plot(val_epoch_loss,label='Validation Loss Dataset 2')
-# plt.plot(val_epoch_loss_d1,label='Validation Loss Dataset 1')
-# plt.legend()
-# plt.xticks(np.arange(0, len(train_epoch_loss), 1))
-# plt.xlabel("Generation")
-# plt.ylabel("Loss")
-# plt.title("Model 2 with SIL Loss")
-# plt.savefig("Model_2_SIL_Loss.png", dpi = 300)
 
-# #Save the student model 
-# student_model.save_pretrained("Saved_Models/model_2_SIL_2")
+
+#Save the student model 
+# student_model.save_pretrained("Saved_Models/model_2_SIL")

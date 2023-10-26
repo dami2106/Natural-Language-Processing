@@ -1,10 +1,9 @@
 #IMPORTS
 from transformers import AutoModelForSequenceClassification
 from torch.utils.data import DataLoader
-from Config_Manager import get_dataset, compute_metrics, evaluate_model, SEED, CLASSES, EPOCHS, LEARNING_RATE, BATCH_SIZE, DEVICE, save_cm
-from sklearn import metrics
-import matplotlib.pyplot as plt
-import numpy as np
+from Config_Manager import get_dataset,  evaluate_model, BATCH_SIZE, DEVICE, save_cm
+from Config_Manager import plot_model_1_loss, plot_model_2_loss
+
 """
 HYPER PARAMS FROM CONFIG FILE
 """
@@ -88,3 +87,10 @@ print("recall:", custom_metrics_dict["recall"])
 print("Cohen's Kappa:", custom_metrics_dict["cohenkappa"])
 print("================================================================\n\n")
 save_cm(custom_metrics_dict["confusion_matrix"], "Model_2_Sil_Dataset1", "Model 2 (SIL) on Dataset 1 Confusion Matrix")
+
+"""
+Plot the loss curves
+"""
+plot_model_1_loss()
+plot_model_2_loss(SIL = True)
+plot_model_2_loss(SIL = False)

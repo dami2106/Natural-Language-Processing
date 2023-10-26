@@ -44,7 +44,6 @@ lr_scheduler = get_scheduler(
 train_epoch_loss = []
 val_epoch_loss = []
 
-
 progress_bar = tqdm(range(num_training_steps))
 for epoch in range(epochs):
     model.train()
