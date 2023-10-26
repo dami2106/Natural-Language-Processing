@@ -26,6 +26,7 @@ def custom_loss(predictions, labels):
     return loss_fn(predictions, labels)
 
 
+#get data sets and splits
 dataset = get_dataset("masakhane")
 train_dataset = dataset["train"]
 val_dataset = dataset["val"]
