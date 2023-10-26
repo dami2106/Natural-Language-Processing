@@ -10,11 +10,11 @@ HYPER PARAMS FROM CONFIG FILE
 batch_size = BATCH_SIZE
 device = DEVICE
 
-train_set_naija = get_dataset("naija")["test"]
-train_set_masakhane = get_dataset("masakhane")["test"]
+test_set_naija = get_dataset("naija")["test"]
+test_set_masakhane = get_dataset("masakhane")["test"]
 
-test_1_dataloader = DataLoader(train_set_naija, batch_size=batch_size)
-test_2_dataloader = DataLoader(train_set_masakhane, batch_size=batch_size)
+test_1_dataloader = DataLoader(test_set_naija, batch_size=batch_size)
+test_2_dataloader = DataLoader(test_set_masakhane, batch_size=batch_size)
 
 #Load in the model that was saved before
 model_1 = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1").to(device)
