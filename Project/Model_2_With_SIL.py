@@ -31,11 +31,13 @@ train_dataset = dataset["train"]
 val_dataset = dataset["val"]
 val_dataset_d1 = get_dataset("naija")["val"]
 del dataset
+
+#create data loaders, create a vaidation data loader for data sets 1 and 2
 train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
 val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
 val_dataloader_d1 = DataLoader(val_dataset_d1, batch_size=batch_size)
 
-#Make the 2 models on the afriberta pre trained
+#Make the 2 models on the afriberta pre trained model from step 1
 student_model = AutoModelForSequenceClassification.from_pretrained("Saved_Models/model_1").to(device)
 student_model.config.loss_name = "cross_entropy" #use cross entropy loss function
 student_optimizer = AdamW(student_model.parameters(), lr=learning_rate)
@@ -84,7 +86,7 @@ for gen in range(generations):
             #First train the teacher model 
             batch = {k : v.to(device) for k, v in batch.items()}
             teacher_model.train()
-            outputs = teacher_model(**batch)
+            outputs = teacher_model(**batch) #get outputs from teacher model
                 
             loss = outputs.loss
             loss.backward()
@@ -111,7 +113,7 @@ for gen in range(generations):
         step_loss = []
         for batch in new_batch:
             batch = {k : v.to(device) for k, v in batch.items()}
-            # Train the student model using the teacher pseudo-labels
+            # Train the student model using the teacher pseudo-labels (soft labels)
             student_optimizer.zero_grad()
             student_logits = student_model(**batch).logits
             loss = custom_loss(student_logits, batch["labels"])
@@ -119,7 +121,7 @@ for gen in range(generations):
             student_optimizer.step()
             lr_scheduler.step()
             step_loss.append(loss.item())
-        se_loss.append(np.mean(step_loss))
+        se_loss.append(np.mean(step_loss)) #keep track of loss
     
     #Loss for 1 generation averaged over the n student epochs 
     train_epoch_loss.append(np.mean(se_loss))
